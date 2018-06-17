@@ -22,7 +22,6 @@ namespace GlobalDifficultyByCompany {
                 }
 
                 float difficulty = totalMechWorth / settings.CostPerHalfSkull;
-                Logger.LogLine("Difficulty: " + difficulty);
 
                 __result = Mathf.Round(difficulty);
             }
