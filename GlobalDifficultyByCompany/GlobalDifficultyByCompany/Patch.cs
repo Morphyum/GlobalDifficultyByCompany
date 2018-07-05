@@ -1,4 +1,5 @@
 ﻿using BattleTech;
+using BattleTech.UI;
 using Harmony;
 using System;
 using System.Collections.Generic;
@@ -31,6 +32,31 @@ namespace GlobalDifficultyByCompany {
             catch (Exception e) {
                 Logger.LogError(e);
 
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(LanceHeaderWidget), "RefreshLanceInfo")]
+    public static class LanceHeaderWidget_RefreshLanceInfo {
+
+        static void Postfix(LanceHeaderWidget __instance, List<MechDef> mechs) {
+            try {
+                /*foreach (object go in __instance.GetComponents<MonoBehaviour>()) {
+                    Logger.LogLine(go.ToString());
+                }*/
+                LanceConfiguratorPanel LC = (LanceConfiguratorPanel)AccessTools.Field(typeof(LanceHeaderWidget), "LC").GetValue(__instance);
+                if (LC.IsSimGame) {
+                    Settings settings = Helper.LoadSettings();
+                    SGDifficultyIndicatorWidget lanceRatingWidget = (SGDifficultyIndicatorWidget)AccessTools.Field(typeof(LanceHeaderWidget), "lanceRatingWidget").GetValue(__instance);
+                    int totalMechWorth = 0;
+                    foreach(MechDef mech in mechs) {
+                        totalMechWorth += Mathf.RoundToInt(Helper.CalculateCBillValue(mech));
+                    }
+                    lanceRatingWidget.SetDifficulty(totalMechWorth / settings.CostPerHalfSkull);
+                }
+            }
+            catch (Exception e) {
+                Logger.LogError(e);
             }
         }
     }

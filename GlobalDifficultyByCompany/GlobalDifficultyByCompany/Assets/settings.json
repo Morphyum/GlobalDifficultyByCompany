@@ -1,4 +1,5 @@
 {
   "CostPerHalfSkull": 10000000,
-  "NumberOfMechsCounted": 4
+  "NumberOfMechsCounted": 4,
+  "DropSkullsPerCost": true
 }
