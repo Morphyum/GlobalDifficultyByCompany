@@ -1,9 +1,11 @@
 ﻿using BattleTech;
 using BattleTech.UI;
+using BattleTech.UI.Tooltips;
 using Harmony;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using UnityEngine;
 
 namespace GlobalDifficultyByCompany {
@@ -41,13 +43,12 @@ namespace GlobalDifficultyByCompany {
 
         static void Postfix(LanceHeaderWidget __instance, List<MechDef> mechs) {
             try {
-                /*foreach (object go in __instance.GetComponents<MonoBehaviour>()) {
-                    Logger.LogLine(go.ToString());
-                }*/
                 LanceConfiguratorPanel LC = (LanceConfiguratorPanel)AccessTools.Field(typeof(LanceHeaderWidget), "LC").GetValue(__instance);
                 if (LC.IsSimGame) {
                     Settings settings = Helper.LoadSettings();
                     SGDifficultyIndicatorWidget lanceRatingWidget = (SGDifficultyIndicatorWidget)AccessTools.Field(typeof(LanceHeaderWidget), "lanceRatingWidget").GetValue(__instance);
+                    TextMeshProUGUI label = lanceRatingWidget.transform.parent.GetComponentsInChildren<TextMeshProUGUI>().FirstOrDefault(t => t.transform.name == "label-lanceRating");
+                    label.text = "Lance Rating";
                     int totalMechWorth = 0;
                     foreach(MechDef mech in mechs) {
                         totalMechWorth += Mathf.RoundToInt(Helper.CalculateCBillValue(mech));
