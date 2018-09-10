@@ -10,8 +10,20 @@ using UnityEngine;
 
 namespace GlobalDifficultyByCompany {
 
+    [HarmonyPatch(typeof(Starmap), "PopulateMap", new Type[] { typeof(SimGameState) })]
+    public static class Starmap_PopulateMap_Patch {
+        static void Prefix(SimGameState simGame) {
+            Settings settings = Helper.LoadSettings();
+            if (settings.ScalePlanets) {
+                foreach (StarSystem system in simGame.StarSystems) {
+                    ReflectionHelper.InvokePrivateMethode(system.Def, "set_Difficulty", new object[] { 0 });
+                }
+            }
+        }
+    }
+
     [HarmonyPatch(typeof(SimGameState))]
-    [HarmonyPatch("GlobalDifficulty", PropertyMethod.Getter)]
+    [HarmonyPatch("GlobalDifficulty", MethodType.Getter)]
     public static class SimGameState_GlobalDifficulty_Getter_Patch {
         static void Postfix(SimGameState __instance, ref float __result) {
             try {
@@ -30,7 +42,8 @@ namespace GlobalDifficultyByCompany {
 
                     float difficulty = totalMechWorth / settings.CostPerHalfSkull;
                     __result = Mathf.Round(difficulty);
-                } else {
+                }
+                else {
                     __result = 0;
                 }
             }
@@ -53,7 +66,7 @@ namespace GlobalDifficultyByCompany {
                     TextMeshProUGUI label = lanceRatingWidget.transform.parent.GetComponentsInChildren<TextMeshProUGUI>().FirstOrDefault(t => t.transform.name == "label-lanceRating");
                     label.text = "Lance Rating";
                     int totalMechWorth = 0;
-                    foreach(MechDef mech in mechs) {
+                    foreach (MechDef mech in mechs) {
                         totalMechWorth += Mathf.RoundToInt(Helper.CalculateCBillValue(mech));
                     }
                     lanceRatingWidget.SetDifficulty(totalMechWorth / settings.CostPerHalfSkull);
