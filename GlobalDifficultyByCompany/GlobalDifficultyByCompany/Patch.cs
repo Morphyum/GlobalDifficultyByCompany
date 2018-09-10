@@ -16,20 +16,23 @@ namespace GlobalDifficultyByCompany {
         static void Postfix(SimGameState __instance, ref float __result) {
             try {
                 Settings settings = Helper.LoadSettings();
-                int totalMechWorth = 0;
-                List<MechDef> mechlist = __instance.ActiveMechs.Values.ToList();
+                if (settings.ScalePlanets) {
+                    int totalMechWorth = 0;
+                    List<MechDef> mechlist = __instance.ActiveMechs.Values.ToList();
+                    mechlist = mechlist.OrderByDescending(x => Helper.CalculateCBillValue(x)).ToList();
+                    int countedmechs = settings.NumberOfMechsCounted;
+                    if (mechlist.Count < settings.NumberOfMechsCounted) {
+                        countedmechs = mechlist.Count;
+                    }
+                    for (int i = 0; i < countedmechs; i++) {
+                        totalMechWorth += Mathf.RoundToInt(Helper.CalculateCBillValue(mechlist[i]));
+                    }
 
-                mechlist = mechlist.OrderByDescending(x => Helper.CalculateCBillValue(x)).ToList();
-                int countedmechs = settings.NumberOfMechsCounted;
-                if (mechlist.Count < settings.NumberOfMechsCounted) {
-                    countedmechs = mechlist.Count;
+                    float difficulty = totalMechWorth / settings.CostPerHalfSkull;
+                    __result = Mathf.Round(difficulty);
+                } else {
+                    __result = 0;
                 }
-                for(int i = 0; i < countedmechs; i++) {
-                    totalMechWorth += Mathf.RoundToInt(Helper.CalculateCBillValue(mechlist[i]));
-                }
-
-                float difficulty = totalMechWorth / settings.CostPerHalfSkull;
-                __result = Mathf.Round(difficulty);
             }
             catch (Exception e) {
                 Logger.LogError(e);
