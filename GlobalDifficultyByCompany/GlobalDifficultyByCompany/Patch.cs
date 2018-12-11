@@ -16,7 +16,10 @@ namespace GlobalDifficultyByCompany {
             Settings settings = Helper.LoadSettings();
             if (settings.ScalePlanets) {
                 foreach (StarSystem system in simGame.StarSystems) {
-                    ReflectionHelper.InvokePrivateMethode(system.Def, "set_Difficulty", new object[] { 0 });
+                    int globalDiffClamped = Mathf.Clamp(Mathf.FloorToInt(simGame.GlobalDifficulty), 1, 10);
+                    AccessTools.Field(typeof(StarSystemDef), "DefaultDifficulty").SetValue(system.Def, globalDiffClamped);
+                    AccessTools.Field(typeof(StarSystemDef), "DifficultyList").SetValue(system.Def, new List<int>());
+                    AccessTools.Field(typeof(StarSystemDef), "DifficultyModes").SetValue(system.Def, new List<SimGameState.SimGameType>());
                 }
             }
         }
@@ -69,7 +72,7 @@ namespace GlobalDifficultyByCompany {
                     foreach (MechDef mech in mechs) {
                         totalMechWorth += Mathf.RoundToInt(Helper.CalculateCBillValue(mech));
                     }
-                    lanceRatingWidget.SetDifficulty(totalMechWorth / settings.CostPerHalfSkull);
+                    lanceRatingWidget.SetDifficulty(Mathf.Min(10,totalMechWorth / settings.CostPerHalfSkull));
                 }
             }
             catch (Exception e) {
