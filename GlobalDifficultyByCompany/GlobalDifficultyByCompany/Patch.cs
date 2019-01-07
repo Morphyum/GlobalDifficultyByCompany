@@ -11,7 +11,7 @@ namespace GlobalDifficultyByCompany {
 
     [HarmonyPatch(typeof(SimGameState), "GetNormalizedDifficulty")]
     public static class SimGameState_GetNormalizedDifficulty_Patch {
-        static void Postfix(SimGameState __instance, int __result) {
+        static void Postfix(SimGameState __instance, ref int __result) {
             Settings settings = Helper.LoadSettings();
             if (settings.ScalePlanets) {
                 __result = Mathf.RoundToInt(Mathf.Clamp(__instance.GlobalDifficulty, 0, 10));
