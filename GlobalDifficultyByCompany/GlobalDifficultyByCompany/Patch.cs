@@ -9,6 +9,16 @@ using UnityEngine;
 
 namespace GlobalDifficultyByCompany {
 
+    [HarmonyPatch(typeof(SimGameState), "GetNormalizedDifficulty")]
+    public static class SimGameState_GetNormalizedDifficulty_Patch {
+        static void Postfix(SimGameState __instance, int __result) {
+            Settings settings = Helper.LoadSettings();
+            if (settings.ScalePlanets) {
+                __result = Mathf.RoundToInt(Mathf.Clamp(__instance.GlobalDifficulty, 0, 10));
+            }
+        }
+    }
+
     [HarmonyPatch(typeof(Starmap), "PopulateMap", new Type[] { typeof(SimGameState) })]
     public static class Starmap_PopulateMap_Patch {
         static void Prefix(SimGameState simGame) {
@@ -47,7 +57,6 @@ namespace GlobalDifficultyByCompany {
                 else {
                     __result = 0;
                 }
-                Logger.LogLine("Returned " + __result + "GlobalDifficulty");
             }
             catch (Exception e) {
                 Logger.LogError(e);
@@ -71,7 +80,7 @@ namespace GlobalDifficultyByCompany {
                     foreach (MechDef mech in mechs) {
                         totalMechWorth += Mathf.RoundToInt(Helper.CalculateCBillValue(mech));
                     }
-                    lanceRatingWidget.SetDifficulty(Mathf.Min(10,totalMechWorth / settings.CostPerHalfSkull));
+                    lanceRatingWidget.SetDifficulty(Mathf.Min(10, totalMechWorth / settings.CostPerHalfSkull));
                 }
             }
             catch (Exception e) {
