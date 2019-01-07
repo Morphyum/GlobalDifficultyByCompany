@@ -1,6 +1,5 @@
 ﻿using BattleTech;
 using BattleTech.UI;
-using BattleTech.UI.Tooltips;
 using Harmony;
 using System;
 using System.Collections.Generic;
@@ -16,8 +15,7 @@ namespace GlobalDifficultyByCompany {
             Settings settings = Helper.LoadSettings();
             if (settings.ScalePlanets) {
                 foreach (StarSystem system in simGame.StarSystems) {
-                    int globalDiffClamped = Mathf.Clamp(Mathf.FloorToInt(simGame.GlobalDifficulty), 1, 10);
-                    AccessTools.Field(typeof(StarSystemDef), "DefaultDifficulty").SetValue(system.Def, globalDiffClamped);
+                    AccessTools.Field(typeof(StarSystemDef), "DefaultDifficulty").SetValue(system.Def, 0);
                     AccessTools.Field(typeof(StarSystemDef), "DifficultyList").SetValue(system.Def, new List<int>());
                     AccessTools.Field(typeof(StarSystemDef), "DifficultyModes").SetValue(system.Def, new List<SimGameState.SimGameType>());
                 }
@@ -49,6 +47,7 @@ namespace GlobalDifficultyByCompany {
                 else {
                     __result = 0;
                 }
+                Logger.LogLine("Returned " + __result + "GlobalDifficulty");
             }
             catch (Exception e) {
                 Logger.LogError(e);
