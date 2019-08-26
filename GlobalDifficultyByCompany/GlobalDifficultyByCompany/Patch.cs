@@ -1,11 +1,13 @@
 ﻿using BattleTech;
 using BattleTech.UI;
 using Harmony;
+using HBS;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace GlobalDifficultyByCompany {
 
@@ -13,7 +15,7 @@ namespace GlobalDifficultyByCompany {
     public static class SimGameState_GetNormalizedDifficulty_Patch {
         static void Postfix(SimGameState __instance, ref int __result) {
             Settings settings = Helper.LoadSettings();
-            if (settings.ScalePlanets) {
+            if (settings.Mode == 0) {
                 __result = Mathf.RoundToInt(Mathf.Clamp(__instance.GlobalDifficulty, 0, 10));
             }
         }
@@ -21,14 +23,68 @@ namespace GlobalDifficultyByCompany {
 
     [HarmonyPatch(typeof(Starmap), "PopulateMap", new Type[] { typeof(SimGameState) })]
     public static class Starmap_PopulateMap_Patch {
-        static void Prefix(SimGameState simGame) {
+
+        static void Prefix(Starmap __instance, SimGameState simGame) {
             Settings settings = Helper.LoadSettings();
-            if (settings.ScalePlanets) {
+            if (settings.Mode == 0) {
                 foreach (StarSystem system in simGame.StarSystems) {
                     AccessTools.Field(typeof(StarSystemDef), "DefaultDifficulty").SetValue(system.Def, 0);
                     AccessTools.Field(typeof(StarSystemDef), "DifficultyList").SetValue(system.Def, new List<int>());
                     AccessTools.Field(typeof(StarSystemDef), "DifficultyModes").SetValue(system.Def, new List<SimGameState.SimGameType>());
                 }
+            }
+        }
+
+        static void Postfix(Starmap __instance, SimGameState simGame) {
+            Settings settings = Helper.LoadSettings();
+            if (settings.Mode == 2) {
+                foreach (StarSystem system in simGame.StarSystems) {
+                    StarSystem capital = simGame.StarSystems.Find(x => x.Name.Equals(Helper.GetCapital(system.Owner)));
+                    if (capital != null) {
+                        StarSystemNode systemByID = __instance.GetSystemByID(system.ID);
+                        StarSystemNode systemByID2 = __instance.GetSystemByID(capital.ID);
+                        AStar.PathFinder starmapPathfinder = new AStar.PathFinder();
+                        starmapPathfinder.InitFindPath(systemByID, systemByID2, 1, 1E-06f, new Action<AStar.AStarResult>(OnPathfindingComplete));
+                        while (!starmapPathfinder.IsDone) {
+                            starmapPathfinder.Step();
+                        }
+                    }
+                    else {
+                        AccessTools.Field(typeof(StarSystemDef), "DefaultDifficulty").SetValue(system.Def, 1);
+                    }
+                    AccessTools.Field(typeof(StarSystemDef), "DifficultyList").SetValue(system.Def, new List<int>());
+                    AccessTools.Field(typeof(StarSystemDef), "DifficultyModes").SetValue(system.Def, new List<SimGameState.SimGameType>());
+                }
+            }
+        }
+        private static void OnPathfindingComplete(AStar.AStarResult result) {
+            try {
+                int baseDifficulty = 5;
+                GameInstance game = LazySingletonBehavior<UnityGameInstance>.Instance.Game;
+                Dictionary<Faction, int> allCareerFactionReputations = game.Simulation.GetAllCareerFactionReputations();
+                Settings settings = Helper.LoadSettings();
+                int count = result.path.Count;
+                StarSystemNode starSystemNode = (StarSystemNode)result.path[0];
+                int rangeDifficulty = 0;
+                int repModifier = 0;
+                Faction repFaction = starSystemNode.System.Owner;
+                if (!Helper.IsCapital(starSystemNode.System)) {
+                    rangeDifficulty = Mathf.RoundToInt((count - 1));
+                } else {
+                    repFaction = Helper.GetFactionForCapital(starSystemNode.System);
+                }
+                if (allCareerFactionReputations.ContainsKey(repFaction)) {
+                    int repOfOwner = allCareerFactionReputations[repFaction];
+                    repModifier = Mathf.CeilToInt(repOfOwner / 20f);
+                }
+                else {
+                    //Logger.LogLine("RepMissing: " + starSystemNode.System.Owner.ToString());
+                    //Logger.LogLine("Def: " + starSystemNode.System.Def.Owner.ToString());
+                }
+                int endDifficulty = Mathf.Clamp(baseDifficulty + rangeDifficulty - repModifier, 1, 10);
+                AccessTools.Field(typeof(StarSystemDef), "DefaultDifficulty").SetValue(starSystemNode.System.Def, endDifficulty);
+            }catch(Exception e) {
+                Logger.LogError(e);
             }
         }
     }
@@ -39,7 +95,7 @@ namespace GlobalDifficultyByCompany {
         static void Postfix(SimGameState __instance, ref float __result) {
             try {
                 Settings settings = Helper.LoadSettings();
-                if (settings.ScalePlanets) {
+                if (settings.Mode == 0) {
                     int totalMechWorth = 0;
                     List<MechDef> mechlist = __instance.ActiveMechs.Values.ToList();
                     mechlist = mechlist.OrderByDescending(x => Helper.CalculateCBillValue(x)).ToList();
@@ -52,7 +108,7 @@ namespace GlobalDifficultyByCompany {
                     }
 
                     float difficulty = totalMechWorth / settings.CostPerHalfSkull;
-                    __result = Mathf.Round(difficulty);
+                    __result = Mathf.Min(10, Mathf.Round(difficulty));
                 }
                 else {
                     __result = 0;
